@@ -1,0 +1,21 @@
+# Зависимости проекта pptx-agent.
+# Установка: .venv/bin/pip install -r requirements.txt
+
+# --- генерация презентаций ---
+python-pptx>=1.0.2
+pydantic>=2.7
+
+# --- сеть и картинки ---
+requests>=2.31
+Pillow>=10.0
+
+# --- агент (ReAct) ---
+langchain>=1.0
+langchain-openai>=1.0
+langgraph>=1.0
+
+# --- веб-поиск без API-ключей (опционально, но желательно) ---
+ddgs>=9.0
+
+# --- тесты ---
+pytest>=8.0
