@@ -1,10 +1,41 @@
 import json
+import os
 import re
 
 import requests
+from langchain_openai import ChatOpenAI
 
-LM_STUDIO_URL = "http://127.0.0.1:1234/v1/chat/completions"
-DEFAULT_MODEL = "google/gemma-4-e4b"
+LM_STUDIO_BASE_URL = os.environ.get("LM_STUDIO_BASE_URL", "http://127.0.0.1:1234/v1")
+LM_STUDIO_URL = f"{LM_STUDIO_BASE_URL}/chat/completions"
+DEFAULT_MODEL = "google/gemma-4-e2b"
+DEFAULT_AGENT_MODEL = os.environ.get("PPTX_LLM_MODEL", "google/gemma-4-e4b")
+
+
+def get_chat_model(
+    model: str | None = None,
+    temperature: float = 0.2,
+    max_tokens: int = 2048,
+) -> ChatOpenAI:
+    """Создать модель LangChain для LM Studio."""
+    return ChatOpenAI(
+        model=model or DEFAULT_AGENT_MODEL,
+        base_url=LM_STUDIO_BASE_URL,
+        api_key=os.environ.get("LM_STUDIO_API_KEY", "lm-studio"),
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout=300,
+        max_retries=1,
+    )
+
+
+def available_models() -> list[str]:
+    """Вернуть модели, доступные в LM Studio."""
+    from tools._http import get_json
+
+    data = get_json(f"{LM_STUDIO_BASE_URL}/models")
+    if not data:
+        return []
+    return [item["id"] for item in data.get("data", []) if item.get("id")]
 
 
 def chat(

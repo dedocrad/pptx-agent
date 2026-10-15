@@ -6,16 +6,12 @@
     (этим и занимается tools/image_quality.py);
   * есть встроенные знаки качества: категории «Featured pictures» / «Quality images».
 
-Две публичные функции:
-    commons_search(query, ...) -> list[ImageCandidate]   # только метаданные, без скачивания
-    image_search(query, ...)   -> ResolvedImage | None   # старый API: нашёл и сразу скачал
+Сначала commons_search находит кандидатов, потом image_resolver оценивает и скачивает их.
 """
 
 import hashlib
 import os
 from urllib.parse import urlparse
-
-from pydantic import BaseModel
 
 from pptx_engine.spec import ImageMeta
 from tools._http import get_json, download
@@ -39,13 +35,6 @@ QUALITY_CATEGORY_MARKERS = {
 }
 
 THUMB_WIDTH = 1600          # ширина превью, которое реально скачиваем
-
-
-class ResolvedImage(BaseModel):
-    """Совместимость со старым кодом: путь к файлу + метаданные."""
-
-    path: str
-    meta: ImageMeta
 
 
 # --------------------------------------------------------------------------
@@ -245,41 +234,3 @@ def to_image_meta(candidate: ImageCandidate, *, score: float = 0.0) -> ImageMeta
         page_url=candidate.page_url,
         score=round(score, 2),
     )
-
-
-# --------------------------------------------------------------------------
-# старый API (обратная совместимость с pipeline и ноутбуком)
-# --------------------------------------------------------------------------
-
-def image_search(query: str, *, min_width: int = 400, min_height: int = 300,
-                 max_candidates: int = 8, out_dir: str = "assets/cache",
-                 debug: bool = False) -> ResolvedImage | None:
-    """Найти и скачать первую подходящую картинку. Без оценки релевантности.
-
-    Для новой логики используйте tools.image_resolver.find_best_image().
-    """
-    if not query or not query.strip():
-        return None
-
-    candidates = commons_search(query, limit=max_candidates,
-                                min_width=min_width, min_height=min_height)
-    if debug:
-        print(f"[image_search] {query!r}: {len(candidates)} кандидатов")
-
-    for candidate in candidates:
-        if not candidate.license_ok:
-            if debug:
-                print(f"  skip {candidate.title}: лицензия {candidate.license_short!r}")
-            continue
-
-        path = download_candidate(candidate, out_dir=out_dir, name_hint=query)
-        if path is None:
-            if debug:
-                print(f"  skip {candidate.title}: не скачалось")
-            continue
-
-        if debug:
-            print(f"  ok {candidate.title} → {path}")
-        return ResolvedImage(path=path, meta=to_image_meta(candidate))
-
-    return None

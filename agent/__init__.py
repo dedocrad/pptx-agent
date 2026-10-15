@@ -1,13 +1,16 @@
-"""Агентная часть проекта: модели, тулзы, ReAct-цикл."""
+"""Публичные функции агента и подключения к LM Studio."""
 
-from agent.llm import DEFAULT_MODEL, available_models, get_chat_model
+from llm.client import (
+    DEFAULT_AGENT_MODEL as DEFAULT_MODEL,
+    available_models,
+    get_chat_model,
+)
 from agent.react import (
     AgentRun,
     AgentStep,
     build_agent,
     run,
     run_agent,
-    run_text_react,
 )
 
 __all__ = [
@@ -19,5 +22,4 @@ __all__ = [
     "get_chat_model",
     "run",
     "run_agent",
-    "run_text_react",
 ]

@@ -1,23 +1,8 @@
-"""Утилиты работы с текстом: HTML → plain text, обрезка, лёгкая нормализация.
-
-Никаких bs4/lxml — только stdlib. Этого хватает, чтобы:
-  * вытащить читаемый текст из HTML-страницы;
-  * почистить сниппеты поисковой выдачи;
-  * посчитать лексическое пересечение описания картинки и запроса слайда
-    (fallback, если локальные embeddings недоступны).
-"""
+"""Небольшие текстовые утилиты для поиска и оценки изображений."""
 
 import html
 import re
-from html.parser import HTMLParser
 
-# теги, внутри которых текст нам не нужен вообще
-_SKIP_TAGS = {"script", "style", "noscript", "svg", "head", "nav", "footer", "form", "iframe"}
-# теги, после которых логично поставить перевод строки
-_BLOCK_TAGS = {
-    "p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6",
-    "section", "article", "blockquote", "pre", "table", "ul", "ol",
-}
 
 _STOPWORDS = {
     # русские
@@ -39,52 +24,6 @@ _STOPWORDS = {
 }
 
 
-class _HtmlToText(HTMLParser):
-    """Минимальный HTML→text: выкидываем script/style, блочные теги → \\n."""
-
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.parts: list[str] = []
-        self._skip_depth = 0
-
-    def handle_starttag(self, tag, attrs):
-        if tag in _SKIP_TAGS:
-            self._skip_depth += 1
-        elif tag in _BLOCK_TAGS:
-            self.parts.append("\n")
-
-    def handle_endtag(self, tag):
-        if tag in _SKIP_TAGS and self._skip_depth > 0:
-            self._skip_depth -= 1
-        elif tag in _BLOCK_TAGS:
-            self.parts.append("\n")
-
-    def handle_data(self, data):
-        if self._skip_depth == 0:
-            self.parts.append(data)
-
-    def text(self) -> str:
-        return "".join(self.parts)
-
-
-def html_to_text(raw_html: str) -> str:
-    """HTML → плоский текст с сохранёнными абзацами."""
-    if not raw_html:
-        return ""
-    parser = _HtmlToText()
-    try:
-        parser.feed(raw_html)
-        parser.close()
-    except Exception:
-        # парсер не должен ронять тулзу из-за кривой разметки
-        pass
-    text = html.unescape(parser.text())
-    text = text.replace("\xa0", " ")          # &nbsp; ломает сравнение строк
-    text = re.sub(r"[ \t\r\f\v]+", " ", text)
-    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
-    return "\n".join(line.strip() for line in text.splitlines()).strip()
-
-
 def strip_tags(raw_html: str) -> str:
     """Снять теги, но НЕ трогать переводы строк (для сниппетов выдачи)."""
     if not raw_html:
@@ -92,15 +31,6 @@ def strip_tags(raw_html: str) -> str:
     text = re.sub(r"<[^>]+>", " ", raw_html)
     text = html.unescape(text).replace("\xa0", " ")
     return re.sub(r"\s+", " ", text).strip()
-
-
-def clean_snippet(text: str, limit: int = 300) -> str:
-    """Сниппет в одну строку, без тегов, обрезанный по границе слова."""
-    text = strip_tags(text or "")
-    if len(text) <= limit:
-        return text
-    cut = text[:limit].rsplit(" ", 1)[0]
-    return (cut or text[:limit]).rstrip(" ,;:.") + "…"
 
 
 def truncate(text: str, limit: int = 1500) -> str:

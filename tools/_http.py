@@ -1,10 +1,4 @@
-"""Тонкий HTTP-слой для всех тулзов.
-
-Правила этого модуля:
-  * наружу НИКОГДА не летят исключения — только None / False;
-  * все запросы идут через один requests.Session (keep-alive + один User-Agent);
-  * есть мягкий rate-limit, чтобы не забанили на Wikimedia / DuckDuckGo.
-"""
+"""Общие HTTP-запросы для поиска и загрузки изображений."""
 
 import time
 import threading
@@ -35,7 +29,7 @@ def _throttle() -> None:
         _last_request_at = time.monotonic()
 
 
-def _request(method: str, url: str, *, params=None, data=None, json_body=None,
+def _request(method: str, url: str, *, params=None, json_body=None,
              timeout: int = DEFAULT_TIMEOUT, retries: int = DEFAULT_RETRIES,
              stream: bool = False):
     """Единая точка входа. Возвращает response или None."""
@@ -43,7 +37,7 @@ def _request(method: str, url: str, *, params=None, data=None, json_body=None,
         _throttle()
         try:
             return _session.request(
-                method, url, params=params, data=data, json=json_body,
+                method, url, params=params, json=json_body,
                 timeout=timeout, stream=stream,
             )
         except requests.RequestException:
@@ -86,55 +80,6 @@ def post_json(url: str, payload: dict,
         r.close()
 
 
-def get_text(url: str, params: dict | None = None,
-             timeout: int = DEFAULT_TIMEOUT,
-             retries: int = DEFAULT_RETRIES,
-             max_bytes: int = 3_000_000) -> str | None:
-    """GET → текст (HTML/JSON/что угодно). None при ошибке."""
-    r = _request("GET", url, params=params, timeout=timeout, retries=retries, stream=True)
-    if r is None:
-        return None
-    try:
-        if r.status_code != 200:
-            return None
-        chunks, total = [], 0
-        for chunk in r.iter_content(16384):
-            chunks.append(chunk)
-            total += len(chunk)
-            if total >= max_bytes:
-                break
-        raw = b"".join(chunks)
-        return raw.decode(r.encoding or "utf-8", errors="replace")
-    except requests.RequestException:
-        return None
-    finally:
-        r.close()
-
-
-def post_form_text(url: str, form: dict,
-                   timeout: int = DEFAULT_TIMEOUT,
-                   retries: int = DEFAULT_RETRIES,
-                   max_bytes: int = 2_000_000) -> str | None:
-    """POST обычной формы → текст. Нужен для html.duckduckgo.com (он не любит GET)."""
-    r = _request("POST", url, data=form, timeout=timeout, retries=retries, stream=True)
-    if r is None:
-        return None
-    try:
-        if r.status_code != 200:
-            return None
-        chunks, total = [], 0
-        for chunk in r.iter_content(16384):
-            chunks.append(chunk)
-            total += len(chunk)
-            if total >= max_bytes:
-                break
-        return b"".join(chunks).decode(r.encoding or "utf-8", errors="replace")
-    except requests.RequestException:
-        return None
-    finally:
-        r.close()
-
-
 def download(url: str, dest_path: str,
              timeout: int = DEFAULT_TIMEOUT,
              max_bytes: int = _MAX_BYTES) -> bool:
@@ -154,7 +99,6 @@ def download(url: str, dest_path: str,
                 f.write(chunk)
         return written > 0
     except (requests.RequestException, ValueError, OSError):
-        # битый файл в кэше хуже, чем отсутствие файла
         try:
             import os
             os.remove(dest_path)

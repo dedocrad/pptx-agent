@@ -8,6 +8,12 @@ from pptx_engine.theme import Theme
 SLIDE_W = Inches(13.333)   # 16:9
 SLIDE_H = Inches(7.5)
 MARGIN = Inches(0.6)
+TITLE_TOP = MARGIN
+TITLE_HEIGHT = Inches(0.9)
+CONTENT_TOP = Inches(1.8)
+CONTENT_HEIGHT = Inches(5)
+COLUMN_WIDTH = (SLIDE_W - 3 * MARGIN) / 2
+COLUMN_RIGHT = 2 * MARGIN + COLUMN_WIDTH
 
 
 def _rgb(t): return RGBColor(*t)
@@ -28,6 +34,21 @@ def _add_textbox(slide, left, top, width, height,
     run.font.bold = bold
     run.font.color.rgb = _rgb(color or theme.text_color)
     return box
+
+
+def _add_standard_title(slide, title: str, theme: Theme):
+    _add_textbox(
+        slide,
+        MARGIN,
+        TITLE_TOP,
+        SLIDE_W - 2 * MARGIN,
+        TITLE_HEIGHT,
+        title,
+        theme,
+        size=theme.title_size,
+        bold=True,
+        color=theme.title_color,
+    )
 
 
 def _add_bullets(slide, left, top, width, height,
@@ -57,61 +78,63 @@ def render_title(slide, s: SlideSpec, theme: Theme):
 
 
 def render_text(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title, theme, size=theme.title_size, bold=True,
-                 color=theme.title_color)
-    _add_bullets(slide, MARGIN, Inches(1.8), SLIDE_W - 2*MARGIN, Inches(5),
-                 s.bullets, theme)
+    _add_standard_title(slide, s.title, theme)
+    _add_bullets(
+        slide, MARGIN, CONTENT_TOP, SLIDE_W - 2 * MARGIN, CONTENT_HEIGHT,
+        s.bullets, theme,
+    )
 
 
 def render_image(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title, theme, size=theme.title_size, bold=True,
-                 color=theme.title_color)
+    _add_standard_title(slide, s.title, theme)
     if s.image:
-        slide.shapes.add_picture(s.image, MARGIN, Inches(1.8),
-                                 width=SLIDE_W - 2*MARGIN)
+        slide.shapes.add_picture(
+            s.image, MARGIN, CONTENT_TOP, width=SLIDE_W - 2 * MARGIN,
+        )
 
 
 def render_text_image(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title, theme, size=theme.title_size, bold=True,
-                 color=theme.title_color)
-    half = (SLIDE_W - 3*MARGIN) / 2
-    _add_bullets(slide, MARGIN, Inches(1.8), half, Inches(5), s.bullets, theme)
+    _add_standard_title(slide, s.title, theme)
+    _add_bullets(
+        slide, MARGIN, CONTENT_TOP, COLUMN_WIDTH, CONTENT_HEIGHT, s.bullets,
+        theme,
+    )
     if s.image:
-        slide.shapes.add_picture(s.image, MARGIN*2 + half, Inches(1.8),
-                                 width=half)
+        slide.shapes.add_picture(
+            s.image, COLUMN_RIGHT, CONTENT_TOP, width=COLUMN_WIDTH,
+        )
 
 
 def render_image_text(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title, theme, size=theme.title_size, bold=True,
-                 color=theme.title_color)
-    half = (SLIDE_W - 3*MARGIN) / 2
+    _add_standard_title(slide, s.title, theme)
     if s.image:
-        slide.shapes.add_picture(s.image, MARGIN, Inches(1.8), width=half)
-    _add_bullets(slide, MARGIN*2 + half, Inches(1.8), half, Inches(5),
-                 s.bullets, theme)
+        slide.shapes.add_picture(
+            s.image, MARGIN, CONTENT_TOP, width=COLUMN_WIDTH,
+        )
+    _add_bullets(
+        slide, COLUMN_RIGHT, CONTENT_TOP, COLUMN_WIDTH, CONTENT_HEIGHT,
+        s.bullets, theme,
+    )
 
 
 def render_two_columns(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title, theme, size=theme.title_size, bold=True,
-                 color=theme.title_color)
-    half = (SLIDE_W - 3*MARGIN) / 2
-    _add_bullets(slide, MARGIN, Inches(1.8), half, Inches(5),
-                 s.column_left, theme)
-    _add_bullets(slide, MARGIN*2 + half, Inches(1.8), half, Inches(5),
-                 s.column_right, theme)
+    _add_standard_title(slide, s.title, theme)
+    _add_bullets(
+        slide, MARGIN, CONTENT_TOP, COLUMN_WIDTH, CONTENT_HEIGHT,
+        s.column_left, theme,
+    )
+    _add_bullets(
+        slide, COLUMN_RIGHT, CONTENT_TOP, COLUMN_WIDTH, CONTENT_HEIGHT,
+        s.column_right, theme,
+    )
 
 
 def render_references(slide, s: SlideSpec, theme: Theme):
-    _add_textbox(slide, MARGIN, MARGIN, SLIDE_W - 2*MARGIN, Inches(0.9),
-                 s.title or "Источники", theme, size=theme.title_size,
-                 bold=True, color=theme.title_color)
-    _add_bullets(slide, MARGIN, Inches(1.8), SLIDE_W - 2*MARGIN, Inches(5),
-                 s.references, theme, size=14)
+    _add_standard_title(slide, s.title or "Источники", theme)
+    _add_bullets(
+        slide, MARGIN, CONTENT_TOP, SLIDE_W - 2 * MARGIN, CONTENT_HEIGHT,
+        s.references, theme, size=14,
+    )
 
 
 RENDERERS = {

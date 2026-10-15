@@ -1,6 +1,4 @@
-"""Подстановка картинок в спецификацию презентации.
-Если достойной картинки нет — слайд деградирует до текстового, а не получает мусор.
-"""
+"""Подстановка подходящих изображений в слайды презентации."""
 
 import os
 
@@ -11,14 +9,8 @@ IMAGE_LAYOUTS = {"image", "text_image", "image_text"}
 
 
 def resolve_images(spec: PresentationSpec,
-                   *,
-                   use_validation: bool = True,
-                   debug: bool = False) -> PresentationSpec:
-    """Пройти по слайдам и подставить картинки.
-
-    use_validation=True  — полный конвейер (описание + LLM-судья + проверка файла);
-    use_validation=False — быстрый режим: первая картинка с подходящей лицензией.
-    """
+                   *, debug: bool = False) -> PresentationSpec:
+    """Подобрать изображения; неподходящие слайды оставить текстовыми."""
     for slide in spec.slides:
         if slide.image:
             continue                                  # уже резолвнуто
@@ -32,17 +24,16 @@ def resolve_images(spec: PresentationSpec,
             slide.image_query = None
             continue
 
-        path, meta = _pick_image(intent, use_validation=use_validation, debug=debug)
-
-        if path is None:
+        image = find_best_image(intent, use_llm=_llm_judge_enabled(), debug=debug)
+        if image is None:
             if slide.layout in IMAGE_LAYOUTS:
-                slide.layout = "text"                 # лучше текст, чем пустая рамка
+                slide.layout = "text"
             slide.image_query = None
             continue
 
-        slide.image = path
-        slide.image_meta = meta
-        slide.layout = target_layout                  # "text" + картинка → "text_image"
+        slide.image = image.path
+        slide.image_meta = image.meta
+        slide.layout = target_layout
 
     return spec
 
@@ -55,21 +46,6 @@ def _layout_for_image_slide(slide) -> str | None:
         return "text_image"                           # апгрейд: слайд просил иллюстрацию
     return None
 
-
-
-def _pick_image(intent, *, use_validation: bool, debug: bool):
-    """Вернуть (путь, метаданные) или (None, None)."""
-    if use_validation:
-        pick = find_best_image(intent, use_llm=_llm_judge_enabled(), debug=debug)
-        if pick is None:
-            return None, None
-        return pick.path, pick.meta
-
-    from tools.image_search import image_search          # быстрый режим без оценки описаний
-    legacy = image_search(intent.query, debug=debug)
-    if legacy is None:
-        return None, None
-    return legacy.path, legacy.meta
 
 
 def _llm_judge_enabled() -> bool:

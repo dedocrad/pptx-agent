@@ -1,4 +1,4 @@
-# pptx-agent
+# PPTX Agent
 
 Локальный агент, который собирает презентации PowerPoint: ищет текстовую информацию,
 подбирает картинки в Wikimedia Commons, проверяет их качество и рендерит `.pptx`.
@@ -32,25 +32,45 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-В LM Studio должны быть загружены:
+В LM Studio запустите сервер по адресу `http://127.0.0.1:1234/v1` и загрузите модель с поддержкой вызова инструментов (function calling). По умолчанию используется `google/gemma-4-e4b`.
 
-* chat-модель с поддержкой tools — по умолчанию `google/gemma-4-e4b`;
-* эмбеддинги — `text-embedding-nomic-embed-text-v1.5` (для оценки картинок).
+### Веб-интерфейс
 
 ```bash
-# все тулзы вживую (сеть + LM Studio)
-.venv/bin/python scripts/smoke_tools.py
+.venv/bin/python -m streamlit run streamlit_app.py
+```
 
-# агент
-.venv/bin/python scripts/agent_demo.py "Собери материал и картинку про Солнечную систему"
+Введите задачу в браузере. Например:
+
+> Сделай презентацию про Марс на 5 слайдов.
+
+Если агент создаст файл `.pptx`, его можно скачать прямо со страницы.
+
+### Как устроен проект
+
+Streamlit и CLI используют один LangChain-агент. Агент создаёт план слайдов, сервис изображений подбирает иллюстрации, а `pptx_engine` собирает файл.
+
+### Командная строка
+
+```bash
+.venv/bin/python scripts/agent_demo.py "Сделай презентацию про Солнечную систему на 5 слайдов"
 .venv/bin/python scripts/agent_demo.py --out mars.pptx "Сделай презентацию про Марс, 5 слайдов"
-.venv/bin/python scripts/agent_demo.py --mode text --model google/gemma-3-1b "Что такое блокчейн?"
-.venv/bin/python scripts/agent_demo.py --list-models
+```
 
-# готовая презентация без агента
-.venv/bin/python scripts/make_deck.py "Квантовые вычисления, 7 слайдов" --out quantum.pptx
+## Настройки
 
-# тесты (офлайн, без сети и модели)
+Для автоматического подбора изображений нужен доступ к интернету. Адрес LM Studio и модель можно изменить переменными окружения:
+
+| Переменная | По умолчанию |
+|---|---|
+| `LM_STUDIO_BASE_URL` | `http://127.0.0.1:1234/v1` |
+| `PPTX_LLM_MODEL` | `google/gemma-4-e4b` |
+
+## Проверка
+
+Офлайн-тесты запускаются командой:
+
+```bash
 .venv/bin/python -m pytest tests -q
 ```
 

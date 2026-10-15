@@ -1,7 +1,7 @@
 import json
 from pydantic import ValidationError
 
-from llm.client import chat
+from llm.client import DEFAULT_AGENT_MODEL, chat
 from pptx_engine.spec import PresentationSpec
 from llm.prompts import SYSTEM_PROMPT, FEWSHOT_USER, FEWSHOT_ASSISTANT
 
@@ -36,7 +36,7 @@ def _strip_code_fences(text: str) -> str:
 
 
 def generate_spec(user_request: str,
-                  model: str = "google/gemma-4-e4b",
+                  model: str = DEFAULT_AGENT_MODEL,
                   max_retries: int = 2) -> PresentationSpec:
     last_error = None
     for attempt in range(max_retries + 1):

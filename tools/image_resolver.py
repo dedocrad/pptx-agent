@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from pptx_engine.spec import ImageMeta
 from tools.image_quality import check_technical, combine_scores, score_candidates
-from tools.image_search import ResolvedImage, commons_search, download_candidate, to_image_meta
+from tools.image_search import commons_search, download_candidate, to_image_meta
 from tools.image_types import ImageCandidate, ImageIntent, ScoredCandidate
 
 DEFAULT_MAX_CANDIDATES = 8
@@ -30,10 +30,6 @@ class ImagePick(BaseModel):
     path: str
     meta: ImageMeta
     score: ScoredCandidate
-
-    def as_resolved(self) -> ResolvedImage:
-        """Для старого кода, который ждёт ResolvedImage."""
-        return ResolvedImage(path=self.path, meta=self.meta)
 
 
 def find_best_image(intent: ImageIntent | str,
@@ -156,7 +152,7 @@ def validate_image_file(path: str,
 
 
 def intent_from_slide(slide) -> ImageIntent | None:
-    """SlideSpec (llm.schema) → ImageIntent. None, если картинка не нужна."""
+    """Преобразовать слайд в запрос на изображение."""
     query = (getattr(slide, "image_query", None) or "").strip()
     if not query:
         return None
