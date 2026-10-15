@@ -16,3 +16,5 @@
 /test.ipynb
 /tests
 /~$Natural_Fires_Presentation.pptx
+__pycache__/
+*.pyc
