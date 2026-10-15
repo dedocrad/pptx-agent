@@ -66,14 +66,6 @@ Streamlit и CLI используют один LangChain-агент. Агент 
 | `LM_STUDIO_BASE_URL` | `http://127.0.0.1:1234/v1` |
 | `PPTX_LLM_MODEL` | `google/gemma-4-e4b` |
 
-## Проверка
-
-Офлайн-тесты запускаются командой:
-
-```bash
-.venv/bin/python -m pytest tests -q
-```
-
 ---
 
 ## Тулзы
@@ -111,29 +103,4 @@ def my_tool(query: str, limit: int = 5) -> str:
 ```
 
 …и в список `ALL_TOOLS`. Docstring — это фактически промпт для модели, поэтому пишите его осмысленно.
-
----
-
-## ReAct-агент
-
-`agent/react.py` поддерживает два режима, потому что локальные модели очень разные:
-
-* **native** — модель умеет function calling (gemma-4-e4b умеет): граф собирается через
-  `langchain.agents.create_agent`, модель сама возвращает `tool_calls`;
-* **text** — модель function calling не умеет (например, gemma-3-1b): ведём классический цикл
-  `Thought → Action → Action Input → Observation → … → Final Answer`, а схема аргументов
-  уходит в промпт текстом. Тулзы те же самые.
-
-```python
-from agent.react import run
-
-result = run("Собери материал и картинку про Марс", mode="auto")   # auto: native → text
-print(result.answer)
-for step in result.steps:          # reasoning / thought / tool_call / observation / final
-    print(step.kind, step.tool, step.text[:80])
-```
-
-`auto` сначала пробует нативный режим и, если он упал или не дал ответа, повторяет текстовым.
-
----
 
